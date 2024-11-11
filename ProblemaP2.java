@@ -1,14 +1,3 @@
-//Leer archivo
-
-//Armar mapa de nodos
-
-//Hacer BFS para encontrar nodos alcanzables
-
-//Encontrar capacidad entre neuronas
-
-//Ford-Fulkerson para hallar flujo máximo
-
-//Encontrar célula calculadora con mayor flujo
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.*;
@@ -84,29 +73,21 @@ class ProblemaP2 {
 
     private static int calcularFlujoMaximo(List<Celula> celulas, double d, int celulaBloqueada) {
         int n = celulas.size();
-        List<List<Integer>> grafo = new ArrayList<>();
-        for (int i = 0; i < n + 2; i++) {
-            grafo.add(new ArrayList<>());
-        }
-
         int[][] capacidad = new int[n + 2][n + 2];
         int source = n;
         int sink = n + 1;
 
+        // Construir la red de flujo
         for (int i = 0; i < n; i++) {
             Celula c1 = celulas.get(i);
             if (c1.id == celulaBloqueada)
                 continue;
 
             if (c1.tipo == 1) {
-                grafo.get(source).add(i);
-                grafo.get(i).add(source);
                 capacidad[source][i] = Integer.MAX_VALUE;
             }
 
             if (c1.tipo == 3) {
-                grafo.get(i).add(sink);
-                grafo.get(sink).add(i);
                 capacidad[i][sink] = Integer.MAX_VALUE;
             }
 
@@ -124,35 +105,68 @@ class ProblemaP2 {
                 if (puedenConectarse(c1, c2, d)) {
                     int peptidosCompartidos = contarPeptidosCompartidos(c1, c2);
                     if (peptidosCompartidos > 0) {
-                        grafo.get(i).add(j);
-                        grafo.get(j).add(i);
                         capacidad[i][j] = peptidosCompartidos;
-                        capacidad[j][i] = peptidosCompartidos;
                     }
                 }
             }
         }
 
-        return fordFulkerson(grafo, capacidad, source, sink);
+        return edmondsKarp(capacidad, source, sink);
+    }
+
+    private static int edmondsKarp(int[][] capacidad, int source, int sink) {
+        int n = capacidad.length;
+        int[][] flujo = new int[n][n];
+        int flujoMaximo = 0;
+
+        while (true) {
+            // Usar BFS para encontrar el camino aumentante más corto
+            int[] padre = new int[n];
+            Arrays.fill(padre, -1);
+            int[] capacidadCamino = new int[n];
+            capacidadCamino[source] = Integer.MAX_VALUE;
+            
+            Queue<Integer> cola = new LinkedList<>();
+            cola.offer(source);
+            padre[source] = source;
+
+            while (!cola.isEmpty() && padre[sink] == -1) {
+                int actual = cola.poll();
+                for (int siguiente = 0; siguiente < n; siguiente++) {
+                    if (padre[siguiente] == -1 && capacidad[actual][siguiente] > flujo[actual][siguiente]) {
+                        padre[siguiente] = actual;
+                        capacidadCamino[siguiente] = Math.min(capacidadCamino[actual], 
+                                                            capacidad[actual][siguiente] - flujo[actual][siguiente]);
+                        cola.offer(siguiente);
+                    }
+                }
+            }
+
+            // Si no hay camino aumentante, terminar
+            if (padre[sink] == -1) {
+                break;
+            }
+
+            // Aumentar el flujo a lo largo del camino encontrado
+            int incrementoFlujo = capacidadCamino[sink];
+            for (int v = sink; v != source; v = padre[v]) {
+                int u = padre[v];
+                flujo[u][v] += incrementoFlujo;
+                flujo[v][u] -= incrementoFlujo;
+            }
+            flujoMaximo += incrementoFlujo;
+        }
+
+        return flujoMaximo;
     }
 
     private static boolean puedenConectarsePorTipo(Celula c1, Celula c2) {
-        // Iniciadora: 1
-        // Calculadora: 2
-        // Ejecutora: 3
-
-        // Iniciadora solo puede enviar calculadora
         if (c1.tipo == 1)
             return c2.tipo == 2;
-
-        // Calculadora puede enviar a tipo 2 y 3
         if (c1.tipo == 2)
             return c2.tipo == 2 || c2.tipo == 3;
-
-        // Ejecutor asolo puede recibir, no enviar
         if (c1.tipo == 3)
             return false;
-
         return false;
     }
 
@@ -164,49 +178,6 @@ class ProblemaP2 {
     private static int contarPeptidosCompartidos(Celula c1, Celula c2) {
         Set<String> peptidos1 = new HashSet<>(c1.peptidos);
         return (int) c2.peptidos.stream().filter(peptidos1::contains).count();
-    }
-
-    private static int fordFulkerson(List<List<Integer>> grafo, int[][] capacidad, int source, int sink) {
-        int n = grafo.size();
-        int flujoMaximo = 0;
-        int[][] flujo = new int[n][n];
-
-        while (true) {
-            int[] padre = new int[n];
-            Arrays.fill(padre, -1);
-            Queue<Integer> cola = new LinkedList<>();
-            cola.add(source);
-            padre[source] = source;
-
-            while (!cola.isEmpty() && padre[sink] == -1) {
-                int u = cola.poll();
-                for (int v : grafo.get(u)) {
-                    if (padre[v] == -1 && capacidad[u][v] - flujo[u][v] > 0) {
-                        padre[v] = u;
-                        cola.add(v);
-                    }
-                }
-            }
-
-            if (padre[sink] == -1)
-                break;
-
-            int flujoPath = Integer.MAX_VALUE;
-            for (int v = sink; v != source; v = padre[v]) {
-                int u = padre[v];
-                flujoPath = Math.min(flujoPath, capacidad[u][v] - flujo[u][v]);
-            }
-
-            for (int v = sink; v != source; v = padre[v]) {
-                int u = padre[v];
-                flujo[u][v] += flujoPath;
-                flujo[v][u] -= flujoPath;
-            }
-
-            flujoMaximo += flujoPath;
-        }
-
-        return flujoMaximo;
     }
 
     public class Celula {
