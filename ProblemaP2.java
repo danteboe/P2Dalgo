@@ -8,7 +8,6 @@ class ProblemaP2 {
     private static Map<Integer, Integer> indexToCellId = new HashMap<>();
 
     public static void main(String[] args) throws Exception {
-        long startTime = System.currentTimeMillis();
 
         ProblemaP2 instancia = new ProblemaP2();
         try (
@@ -86,7 +85,7 @@ class ProblemaP2 {
 
         for (int i = 0; i < celulas.size(); i++) {
             Celula celula = celulas.get(i);
-            if (celula.tipo == 2 && maxFlowVertices.contains(celula.id)) { // Calculadora
+            if (celula.tipo == 2 && maxFlowVertices.contains(celula.id)) {
                 int bloqueadaIndex = cellIdToIndex.get(celula.id);
                 int flujoActual = maxFlow(graph, source, sink, bloqueadaIndex);
                 if (flujoActual <= menorFlujo) {
@@ -115,10 +114,10 @@ class ProblemaP2 {
 
         for (int i = 0; i < n; i++) {
             Celula c1 = celulas.get(i);
-            if (c1.tipo == 1) { // Type 1 cells connect to source
+            if (c1.tipo == 1) {
                 addEdge(graph, source, i, Integer.MAX_VALUE);
             }
-            if (c1.tipo == 3) { // Type 3 cells connect to sink
+            if (c1.tipo == 3) {
                 addEdge(graph, i, sink, Integer.MAX_VALUE);
             }
             for (int j = 0; j < n; j++) {
@@ -150,7 +149,6 @@ class ProblemaP2 {
     private static int maxFlow(List<List<Edge>> originalGraph, int source, int sink, int bloqueadaIndex) {
         int n = originalGraph.size();
         bloqueadaIndexGlobal = bloqueadaIndex;
-        // Deep copy the graph to preserve original capacities
         List<List<Edge>> graph = new ArrayList<>(n);
         for (int i = 0; i < n; i++) {
             graph.add(new ArrayList<>());
@@ -160,7 +158,6 @@ class ProblemaP2 {
             }
         }
 
-        // Reconstruct reverse edges for the copied graph
         for (int i = 0; i < n; i++) {
             for (Edge e : graph.get(i)) {
                 for (Edge rev : graph.get(e.to)) {
@@ -172,7 +169,6 @@ class ProblemaP2 {
         }
 
         if (bloqueadaIndex >= 0) {
-            // Remove all edges to and from the blocked node
             graph.get(bloqueadaIndex).clear();
             for (List<Edge> edges : graph) {
                 edges.removeIf(e -> e.to == bloqueadaIndex);
