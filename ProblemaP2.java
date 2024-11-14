@@ -7,7 +7,7 @@ class ProblemaP2 {
         ProblemaP2 instancia = new ProblemaP2();
         try (
                 InputStreamReader is = new InputStreamReader(System.in);
-                BufferedReader br = new BufferedReader(is);) {
+                BufferedReader br = new BufferedReader(is)) {
             String line = br.readLine();
             int casos = Integer.parseInt(line);
 
@@ -16,7 +16,6 @@ class ProblemaP2 {
                 String[] primeraLinea = line.split(" ");
                 int n = Integer.parseInt(primeraLinea[0]);
                 int d = Integer.parseInt(primeraLinea[1]);
-
                 List<Celula> celulas = new ArrayList<>();
                 for (int j = 0; j < n; j++) {
                     line = br.readLine();
@@ -25,14 +24,12 @@ class ProblemaP2 {
                     int x = Integer.parseInt(dataStr[1]);
                     int y = Integer.parseInt(dataStr[2]);
                     int tipo = Integer.parseInt(dataStr[3]);
-
                     Celula celula = instancia.new Celula(id, x, y, tipo);
                     for (int k = 4; k < dataStr.length; k++) {
                         celula.peptidos.add(dataStr[k]);
                     }
                     celulas.add(celula);
                 }
-
                 Resultado resultado = resolverCaso(celulas, d);
                 System.out.println(resultado.celulaId + " " + resultado.flujoOriginal + " " + resultado.flujoReducido);
             }
@@ -51,135 +48,6 @@ class ProblemaP2 {
         }
     }
 
-    private static Resultado resolverCaso(List<Celula> celulas, double d) {
-        int flujoOriginal = calcularFlujoMaximo(celulas, d, -1);
-
-        int mejorCelulaId = -1;
-        int menorFlujo = Integer.MAX_VALUE;
-
-        for (int i = celulas.size() - 1; i >= 0; i--) {
-            Celula celula = celulas.get(i);
-            if (celula.tipo == 2) { // Calculadora
-                int flujoActual = calcularFlujoMaximo(celulas, d, celula.id);
-                if (flujoActual <= menorFlujo) {
-                    menorFlujo = flujoActual;
-                    mejorCelulaId = celula.id;
-                }
-            }
-        }
-
-        return new Resultado(mejorCelulaId, flujoOriginal, menorFlujo);
-    }
-
-    private static int calcularFlujoMaximo(List<Celula> celulas, double d, int celulaBloqueada) {
-        int n = celulas.size();
-        int[][] capacidad = new int[n + 2][n + 2];
-        int source = n;
-        int sink = n + 1;
-
-        // Construir la red de flujo
-        for (int i = 0; i < n; i++) {
-            Celula c1 = celulas.get(i);
-            if (c1.id == celulaBloqueada)
-                continue;
-
-            if (c1.tipo == 1) {
-                capacidad[source][i] = Integer.MAX_VALUE;
-            }
-
-            if (c1.tipo == 3) {
-                capacidad[i][sink] = Integer.MAX_VALUE;
-            }
-
-            for (int j = 0; j < n; j++) {
-                if (i == j)
-                    continue;
-
-                Celula c2 = celulas.get(j);
-                if (c2.id == celulaBloqueada)
-                    continue;
-
-                if (!puedenConectarsePorTipo(c1, c2))
-                    continue;
-
-                if (puedenConectarse(c1, c2, d)) {
-                    int peptidosCompartidos = contarPeptidosCompartidos(c1, c2);
-                    if (peptidosCompartidos > 0) {
-                        capacidad[i][j] = peptidosCompartidos;
-                    }
-                }
-            }
-        }
-
-        return edmondsKarp(capacidad, source, sink);
-    }
-
-    private static int edmondsKarp(int[][] capacidad, int source, int sink) {
-        int n = capacidad.length;
-        int[][] flujo = new int[n][n];
-        int flujoMaximo = 0;
-
-        while (true) {
-            // Usar BFS para encontrar el camino aumentante más corto
-            int[] padre = new int[n];
-            Arrays.fill(padre, -1);
-            int[] capacidadCamino = new int[n];
-            capacidadCamino[source] = Integer.MAX_VALUE;
-            
-            Queue<Integer> cola = new LinkedList<>();
-            cola.offer(source);
-            padre[source] = source;
-
-            while (!cola.isEmpty() && padre[sink] == -1) {
-                int actual = cola.poll();
-                for (int siguiente = 0; siguiente < n; siguiente++) {
-                    if (padre[siguiente] == -1 && capacidad[actual][siguiente] > flujo[actual][siguiente]) {
-                        padre[siguiente] = actual;
-                        capacidadCamino[siguiente] = Math.min(capacidadCamino[actual], 
-                                                            capacidad[actual][siguiente] - flujo[actual][siguiente]);
-                        cola.offer(siguiente);
-                    }
-                }
-            }
-
-            // Si no hay camino aumentante, terminar
-            if (padre[sink] == -1) {
-                break;
-            }
-
-            // Aumentar el flujo a lo largo del camino encontrado
-            int incrementoFlujo = capacidadCamino[sink];
-            for (int v = sink; v != source; v = padre[v]) {
-                int u = padre[v];
-                flujo[u][v] += incrementoFlujo;
-                flujo[v][u] -= incrementoFlujo;
-            }
-            flujoMaximo += incrementoFlujo;
-        }
-
-        return flujoMaximo;
-    }
-
-    private static boolean puedenConectarsePorTipo(Celula c1, Celula c2) {
-        if (c1.tipo == 1)
-            return c2.tipo == 2;
-        if (c1.tipo == 2)
-            return c2.tipo == 2 || c2.tipo == 3;
-        if (c1.tipo == 3)
-            return false;
-        return false;
-    }
-
-    private static boolean puedenConectarse(Celula c1, Celula c2, double d) {
-        double distancia = Math.sqrt(Math.pow(c1.posX - c2.posX, 2) + Math.pow(c1.posY - c2.posY, 2));
-        return distancia <= d;
-    }
-
-    private static int contarPeptidosCompartidos(Celula c1, Celula c2) {
-        Set<String> peptidos1 = new HashSet<>(c1.peptidos);
-        return (int) c2.peptidos.stream().filter(peptidos1::contains).count();
-    }
-
     public class Celula {
         int id;
         int posX;
@@ -194,5 +62,190 @@ class ProblemaP2 {
             this.tipo = tipo;
             this.peptidos = new ArrayList<>();
         }
+    }
+
+    private static Resultado resolverCaso(List<Celula> celulas, double d) {
+        int n = celulas.size();
+        int source = n;
+        int sink = n + 1;
+        Map<Integer, Integer> cellIdToIndex = new HashMap<>();
+        List<List<Edge>> graph = buildGraph(celulas, d, cellIdToIndex, source, sink);
+
+        int flujoOriginal = maxFlow(graph, source, sink, -1);
+
+        int mejorCelulaId = -1;
+        int menorFlujo = Integer.MAX_VALUE;
+
+        for (int i = 0; i < celulas.size(); i++) {
+            Celula celula = celulas.get(i);
+            if (celula.tipo == 2) { // Calculadora
+                int bloqueadaIndex = cellIdToIndex.get(celula.id);
+                int flujoActual = maxFlow(graph, source, sink, bloqueadaIndex);
+                if (flujoActual <= menorFlujo) {
+                    menorFlujo = flujoActual;
+                    mejorCelulaId = celula.id;
+                }
+            }
+        }
+
+        return new Resultado(mejorCelulaId, flujoOriginal, menorFlujo);
+    }
+
+    private static List<List<Edge>> buildGraph(List<Celula> celulas, double d, Map<Integer, Integer> cellIdToIndex, int source, int sink) {
+        int n = celulas.size();
+        int totalNodes = n + 2;
+        List<List<Edge>> graph = new ArrayList<>(totalNodes);
+        for (int i = 0; i < totalNodes; i++) {
+            graph.add(new ArrayList<>());
+        }
+
+        for (int i = 0; i < n; i++) {
+            Celula c = celulas.get(i);
+            cellIdToIndex.put(c.id, i);
+        }
+
+        for (int i = 0; i < n; i++) {
+            Celula c1 = celulas.get(i);
+            if (c1.tipo == 1) { // Type 1 cells connect to source
+                addEdge(graph, source, i, Integer.MAX_VALUE);
+            }
+            if (c1.tipo == 3) { // Type 3 cells connect to sink
+                addEdge(graph, i, sink, Integer.MAX_VALUE);
+            }
+            for (int j = 0; j < n; j++) {
+                if (i != j) {
+                    Celula c2 = celulas.get(j);
+                    if (puedenConectarsePorTipo(c1, c2) && puedenConectarse(c1, c2, d)) {
+                        int peptidosCompartidos = contarPeptidosCompartidos(c1, c2);
+                        if (peptidosCompartidos > 0) {
+                            addEdge(graph, i, j, peptidosCompartidos);
+                        }
+                    }
+                }
+            }
+        }
+        return graph;
+    }
+
+    private static void addEdge(List<List<Edge>> graph, int from, int to, int capacity) {
+        Edge forward = new Edge(to, capacity);
+        Edge backward = new Edge(from, 0);
+        forward.reverse = backward;
+        backward.reverse = forward;
+        graph.get(from).add(forward);
+        graph.get(to).add(backward);
+    }
+
+    private static int maxFlow(List<List<Edge>> originalGraph, int source, int sink, int bloqueadaIndex) {
+        int n = originalGraph.size();
+        // Deep copy the graph to preserve original capacities
+        List<List<Edge>> graph = new ArrayList<>(n);
+        for (int i = 0; i < n; i++) {
+            graph.add(new ArrayList<>());
+            for (Edge e : originalGraph.get(i)) {
+                Edge edgeCopy = new Edge(e.to, e.capacity);
+                graph.get(i).add(edgeCopy);
+            }
+        }
+
+        // Reconstruct reverse edges for the copied graph
+        for (int i = 0; i < n; i++) {
+            for (Edge e : graph.get(i)) {
+                for (Edge rev : graph.get(e.to)) {
+                    if (rev.to == i) {
+                        e.reverse = rev;
+                    }
+                }
+            }
+        }
+
+        if (bloqueadaIndex >= 0) {
+            // Remove all edges to and from the blocked node
+            graph.get(bloqueadaIndex).clear();
+            for (List<Edge> edges : graph) {
+                edges.removeIf(e -> e.to == bloqueadaIndex);
+            }
+        }
+
+        int flow = 0;
+        int[] level = new int[n];
+        while (bfs(graph, source, sink, level)) {
+            int[] ptr = new int[n];
+            int pushed;
+            while ((pushed = dfs(graph, source, sink, ptr, level, Integer.MAX_VALUE)) > 0) {
+                flow += pushed;
+            }
+        }
+        return flow;
+    }
+
+    private static boolean bfs(List<List<Edge>> graph, int source, int sink, int[] level) {
+        Arrays.fill(level, -1);
+        Queue<Integer> queue = new LinkedList<>();
+        queue.offer(source);
+        level[source] = 0;
+        while (!queue.isEmpty()) {
+            int v = queue.poll();
+            for (Edge e : graph.get(v)) {
+                if (e.capacity > 0 && level[e.to] < 0) {
+                    level[e.to] = level[v] + 1;
+                    queue.offer(e.to);
+                }
+            }
+        }
+        return level[sink] >= 0;
+    }
+
+    private static int dfs(List<List<Edge>> graph, int v, int sink, int[] ptr, int[] level, int flow) {
+        if (v == sink || flow == 0) {
+            return flow;
+        }
+        for (; ptr[v] < graph.get(v).size(); ptr[v]++) {
+            Edge e = graph.get(v).get(ptr[v]);
+            if (level[e.to] == level[v] + 1 && e.capacity > 0) {
+                int pushed = dfs(graph, e.to, sink, ptr, level, Math.min(flow, e.capacity));
+                if (pushed > 0) {
+                    e.capacity -= pushed;
+                    e.reverse.capacity += pushed;
+                    return pushed;
+                }
+            }
+        }
+        return 0;
+    }
+
+    private static class Edge {
+        int to;
+        int capacity;
+        Edge reverse;
+
+        public Edge(int to, int capacity) {
+            this.to = to;
+            this.capacity = capacity;
+        }
+    }
+
+    private static boolean puedenConectarsePorTipo(Celula c1, Celula c2) {
+        if (c1.tipo == 1)
+            return c2.tipo == 2;
+        if (c1.tipo == 2)
+            return c2.tipo == 2 || c2.tipo == 3;
+        return false;
+    }
+
+    private static boolean puedenConectarse(Celula c1, Celula c2, double d) {
+        double distancia = Math.hypot(c1.posX - c2.posX, c1.posY - c2.posY);
+        return distancia <= d;
+    }
+
+    private static int contarPeptidosCompartidos(Celula c1, Celula c2) {
+        Set<String> peptidos1 = new HashSet<>(c1.peptidos);
+        int count = 0;
+        for (String p : c2.peptidos) {
+            if (peptidos1.contains(p)) {
+                count++;
+            }
+        }
+        return count;
     }
 }
