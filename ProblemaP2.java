@@ -3,7 +3,13 @@ import java.io.InputStreamReader;
 import java.util.*;
 
 class ProblemaP2 {
+
+    private static Set<Integer> maxFlowVertices = new HashSet<>();
+    private static Map<Integer, Integer> indexToCellId = new HashMap<>();
+
     public static void main(String[] args) throws Exception {
+        long startTime = System.currentTimeMillis();
+
         ProblemaP2 instancia = new ProblemaP2();
         try (
                 InputStreamReader is = new InputStreamReader(System.in);
@@ -69,8 +75,10 @@ class ProblemaP2 {
         int source = n;
         int sink = n + 1;
         Map<Integer, Integer> cellIdToIndex = new HashMap<>();
+        indexToCellId.clear();
         List<List<Edge>> graph = buildGraph(celulas, d, cellIdToIndex, source, sink);
 
+        maxFlowVertices.clear();
         int flujoOriginal = maxFlow(graph, source, sink, -1);
 
         int mejorCelulaId = -1;
@@ -78,7 +86,7 @@ class ProblemaP2 {
 
         for (int i = 0; i < celulas.size(); i++) {
             Celula celula = celulas.get(i);
-            if (celula.tipo == 2) { // Calculadora
+            if (celula.tipo == 2 && maxFlowVertices.contains(celula.id)) { // Calculadora
                 int bloqueadaIndex = cellIdToIndex.get(celula.id);
                 int flujoActual = maxFlow(graph, source, sink, bloqueadaIndex);
                 if (flujoActual <= menorFlujo) {
@@ -102,6 +110,7 @@ class ProblemaP2 {
         for (int i = 0; i < n; i++) {
             Celula c = celulas.get(i);
             cellIdToIndex.put(c.id, i);
+            indexToCellId.put(i, c.id);
         }
 
         for (int i = 0; i < n; i++) {
@@ -136,8 +145,11 @@ class ProblemaP2 {
         graph.get(to).add(backward);
     }
 
+    static private int bloqueadaIndexGlobal = -1;
+
     private static int maxFlow(List<List<Edge>> originalGraph, int source, int sink, int bloqueadaIndex) {
         int n = originalGraph.size();
+        bloqueadaIndexGlobal = bloqueadaIndex;
         // Deep copy the graph to preserve original capacities
         List<List<Edge>> graph = new ArrayList<>(n);
         for (int i = 0; i < n; i++) {
@@ -207,6 +219,9 @@ class ProblemaP2 {
                 if (pushed > 0) {
                     e.capacity -= pushed;
                     e.reverse.capacity += pushed;
+                    if (bloqueadaIndexGlobal == -1) {
+                        maxFlowVertices.add(indexToCellId.get(v));
+                    }
                     return pushed;
                 }
             }
